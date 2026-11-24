@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ito オンライン（GitHub Pages + Firebase）</title>
+  <style>
+    body { font-family: sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; background: #f8fafc; }
+    .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fff; }
+    .field { margin-bottom: 0.75rem; }
+    label.block { display: block; font-weight: bold; margin-bottom: 0.25rem; }
+    input[type="text"], input[type="password"] { padding: 0.45rem; border: 1px solid #94a3b8; border-radius: 4px; box-sizing: border-box; }
+    .full { width: 100%; }
+    button { padding: 0.45rem 0.9rem; margin-right: 0.4rem; margin-bottom: 0.3rem; cursor: pointer; border-radius: 4px; border: 1px solid #94a3b8; background: #f1f5f9; }
+    button:hover:not(:disabled) { background: #e2e8f0; }
+    button.primary { background: #1a56db; color: #fff; border-color: #1a56db; }
+    button.primary:hover:not(:disabled) { background: #1e40af; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .theme { font-size: 1.25rem; font-weight: bold; color: #1a56db; }
+    .card-num { font-size: 2rem; font-weight: bold; margin: 0.3rem 0; }
+    .played-card {
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+      border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.6rem 0.8rem; background: #f8fafc; margin-bottom: 0.4rem;
+    }
+    .played-card.ok { border-color: #16a34a; background: #f0fdf4; }
+    .played-card.ng { border-color: #dc2626; background: #fef2f2; }
+    .log-box {
+      max-height: 220px; overflow-y: auto; background: #0f172a; color: #f8fafc;
+      padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; font-family: monospace;
+    }
+    .log-item { border-bottom: 1px solid #1e293b; padding-bottom: 0.2rem; margin-bottom: 0.2rem; }
+  </style>
+</head>
+<body>
+  <h1>ito オンライン</h1>
+
+  <!-- ロビー画面 -->
+  <div id="lobbyScreen" class="box">
+    <h2>ロビー（入室設定）</h2>
+    <div class="field">
+      <label class="block" for="playerName">あなたの名前</label>
+      <input id="playerName" class="full" type="text" placeholder="例：タロウ" maxlength="20" />
+    </div>
+    <div class="field">
+      <label class="block">役割</label>
+      <label style="margin-right: 1rem;"><input type="radio" name="role" value="host" checked /> ホスト（部屋を作る）</label>
+      <label><input type="radio" name="role" value="member" /> メンバー（部屋に入る）</label>
+    </div>
+    <div class="field">
+      <label class="block" for="roomName">部屋名</label>
+      <input id="roomName" class="full" type="text" placeholder="例：ito部屋1" maxlength="30" />
+    </div>
+    <div class="field">
+      <label class="block" for="roomPassword">パスワード（合言葉）</label>
+      <input id="roomPassword" class="full" type="password" placeholder="合言葉を入力" maxlength="30" />
+    </div>
+    <button id="enterBtn" class="primary" type="button">入室する</button>
+    <div id="lobbyError" style="color: #dc2626; margin-top: 0.5rem;"></div>
+  </div>
+
+  <!-- ゲーム画面 -->
+  <div id="gameScreen" style="display: none;">
+    <div class="box">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div id="headerInfo"></div>
+        <button id="leaveBtn" type="button">ロビーへ戻る</button>
+      </div>
+      <div id="memberList" style="margin-top: 0.4rem; font-size: 0.95rem; color: #475569;"></div>
+    </div>
+
+    <!-- ホスト専用コントロール -->
+    <div id="hostPanel" class="box" style="display: none;">
+      <strong>ホスト操作（ラウンド開始・お題設定）</strong>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+        <input id="themeInput" type="text" placeholder="お題を入力（空欄ならランダム）" style="flex: 1; min-width: 220px;" />
+        <button id="fillRandomThemeBtn" type="button">ランダム候補を入れる</button>
+        <button id="startRoundBtn" class="primary" type="button">ラウンド開始</button>
+      </div>
+    </div>
+
+    <!-- お題 -->
+    <div class="box">
+      <div>今回のお題</div>
+      <div id="themeDisplay" class="theme">（ホストの開始待ち）</div>
+    </div>
+
+    <!-- 自分の手札・回答入力 -->
+    <div class="box">
+      <strong>あなたの手札・回答入力（公開前なら再入力可）</strong>
+      <div id="myCardArea" style="margin-top: 0.4rem;">ラウンド開始をお待ちください。</div>
+    </div>
+
+    <!-- 場のカード -->
+    <div class="box">
+      <strong>場のカード（大きい順に並び替え）</strong>
+      <div id="playedArea" style="margin-top: 0.5rem;"></div>
+      <div style="margin-top: 0.75rem;">
+        <button id="revealBtn" type="button">数字を一斉公開・判定（大きい順）</button>
+      </div>
+    </div>
+
+    <!-- ログ -->
+    <div class="box">
+      <strong>進行・回答ログ</strong>
+      <div id="logArea" class="log-box"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      get,
+      onValue,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+    // ★ 自分のFirebaseプロジェクトの設定に書き換えてください
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCB77-714bKM6X8Ig2DL1KSHPMDhwGofaE",
+      authDomain: "ito-on-line.firebaseapp.com",
+      databaseURL: "https://ito-on-line-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ito-on-line",
+      storageBucket: "ito-on-line.firebasestorage.app",
+      messagingSenderId: "404687366039",
+      appId: "1:404687366039:web:30d90976d82498f46406d2",
+      measurementId: "G-1E8HQEZX9Q"
+    };
+
+    const THEMES = [
+      "大きそうなもの",
+      "人気のアニメ・ゲームキャラ",
+      "無人島に持っていきたいもの",
+      "言いづらい一言",
+      "強そうな武器"
+    ];
+
+    const app = initializeApp(FIREBASE_CONFIG);
+    const db = getDatabase(app);
+
+    let playerId = localStorage.getItem("ito_player_id");
+    if (!playerId) {
+      playerId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+      localStorage.setItem("ito_player_id", playerId);
+    }
+
+    const session = {
+      playerName: "",
+      role: "host",
+      roomName: "",
+      password: "",
+      roomKey: "",
+      unsubscribe: null
+    };
+
+    async function hashPassword(pw) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function toRoomKey(roomName) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(roomName));
+      return "room_" + Array.from(new Uint8Array(buf)).slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function nowTime() {
+      return new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
+    function appendLog(room, msg) {
+      const logs = Array.isArray(room.logs) ? room.logs : [];
+      logs.unshift(`[${nowTime()}] ${msg}`);
+      room.logs = logs.slice(0, 50);
+    }
+
+    document.getElementById("enterBtn").addEventListener("click", async () => {
+      const name = document.getElementById("playerName").value.trim();
+      const role = document.querySelector('input[name="role"]:checked').value;
+      const roomName = document.getElementById("roomName").value.trim();
+      const password = document.getElementById("roomPassword").value;
+      const errEl = document.getElementById("lobbyError");
+
+      if (!name || !roomName || !password) {
+        errEl.textContent = "名前・部屋名・パスワードをすべて入力してください。";
+        return;
+      }
+
+      const pwHash = await hashPassword(password);
+      const roomKey = await toRoomKey(roomName);
+      const roomRef = ref(db, `rooms/${roomKey}`);
+
+      try {
+        if (role === "host") {
+          const snap = await get(roomRef);
+          if (snap.exists() && snap.val().passwordHash && snap.val().passwordHash !== pwHash) {
+            errEl.textContent = "同名の部屋が既に存在します（パスワード不一致）。";
+            return;
+          }
+
+          const initialRoom = {
+            roomName,
+            passwordHash: pwHash,
+            hostId: playerId,
+            theme: "",
+            started: false,
+            revealed: false,
+            players: [
+              { id: playerId, name, number: null, answerText: "", played: false }
+            ],
+            playedOrder: [],
+            logs: [`[${nowTime()}] 部屋「${roomName}」を作成しました（ホスト: ${name}）`]
+          };
+
+          await runTransaction(roomRef, (current) => {
+            if (current && current.passwordHash && current.passwordHash !== pwHash) {
+              return current;
+            }
+            return initialRoom;
+          });
+        } else {
+          const snap = await get(roomRef);
+          if (!snap.exists()) {
+            errEl.textContent = "指定された部屋が見つかりません。";
+            return;
+          }
+          const existing = snap.val();
+          if (existing.passwordHash !== pwHash) {
+            errEl.textContent = "パスワードが違います。";
+            return;
+          }
+
+          let joinBlocked = false;
+          await runTransaction(roomRef, (current) => {
+            if (!current) return current;
+            const players = Array.isArray(current.players) ? current.players : [];
+            const found = players.find(p => p.id === playerId);
+            if (found) {
+              found.name = name;
+            } else {
+              if (current.started && !current.revealed) {
+                joinBlocked = true;
+                return current;
+              }
+              players.push({ id: playerId, name, number: null, answerText: "", played: false });
+              appendLog(current, `${name} が入室しました`);
+            }
+            current.players = players;
+            return current;
+          });
+
+          if (joinBlocked) {
+            errEl.textContent = "現在ラウンド進行中のため途中参加できません。";
+            return;
+          }
+        }
+
+        session.playerName = name;
+        session.role = role;
+        session.roomName = roomName;
+        session.password = password;
+        session.roomKey = roomKey;
+
+        errEl.textContent = "";
+        document.getElementById("lobbyScreen").style.display = "none";
+        document.getElementById("gameScreen").style.display = "block";
+
+        if (session.unsubscribe) session.unsubscribe();
+        session.unsubscribe = onValue(roomRef, (snapshot) => {
+          if (!snapshot.exists()) return;
+          renderState(snapshot.val());
+        });
+      } catch (e) {
+        errEl.textContent = "通信エラーが発生しました: " + e.message;
+      }
+    });
+
+    document.getElementById("leaveBtn").addEventListener("click", () => {
+      if (session.unsubscribe) {
+        session.unsubscribe();
+        session.unsubscribe = null;
+      }
+      document.getElementById("gameScreen").style.display = "none";
+      document.getElementById("lobbyScreen").style.display = "block";
+    });
+
+    document.getElementById("fillRandomThemeBtn").addEventListener("click", () => {
+      document.getElementById("themeInput").value = THEMES[Math.floor(Math.random() * THEMES.length)];
+    });
+
+    document.getElementById("startRoundBtn").addEventListener("click", async () => {
+      const rawTheme = document.getElementById("themeInput").value.trim();
+      const roomRef = ref(db, `rooms/${session.roomKey}`);
+
+      await runTransaction(roomRef, (room) => {
+        if (!room || room.hostId !== playerId) return room;
+        const players = Array.isArray(room.players) ? room.players : [];
+        const theme = rawTheme || THEMES[Math.floor(Math.random() * THEMES.length)];
+
+        const pool = Array.from({ length: 100 }, (_, i) => i + 1);
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+
+        room.players = players.map((p, idx) => ({
+          ...p,
+          number: pool[idx],
+          answerText: "",
+          played: false
+        }));
+        room.theme = theme;
+        room.started = true;
+        room.revealed = false;
+        room.playedOrder = [];
+        appendLog(room, `新ラウンド開始（${room.players.length}人・大きい順）お題：「${theme}」`);
+        return room;
+      });
+    });
+
+    document.getElementById("revealBtn").addEventListener("click", async () => {
+      const roomRef = ref(db, `rooms/${session.roomKey}`);
+
+      await runTransaction(roomRef, (room) => {
+        if (!room || !room.started || room.revealed) return room;
+        const order = Array.isArray(room.playedOrder) ? room.playedOrder : [];
+        if (order.length === 0) return room;
+
+        room.revealed = true;
+        let isSuccess = true;
+        for (let i = 1; i < order.length; i++) {
+          if (order[i - 1].number < order[i].number) {
+            isSuccess = false;
+            break;
+          }
+        }
+        const summary = order.map((c, i) => `${i + 1}番目:${c.playerName}[${c.number}](${c.answerText})`).join(" → ");
+        const label = isSuccess ? "成功！大きい順に並びました" : "失敗…小さい数字が先に来ています";
+        appendLog(room, `結果公開（大きい順）: ${label} / ${summary}`);
+        return room;
+      });
+    });
+
+    function renderState(room) {
+      const players = Array.isArray(room.players) ? room.players : [];
+      const playedOrder = Array.isArray(room.playedOrder) ? room.playedOrder : [];
+      const logs = Array.isArray(room.logs) ? room.logs : [];
+      const isHost = room.hostId === playerId;
+
+      document.getElementById("hostPanel").style.display = isHost ? "block" : "none";
+      document.getElementById("headerInfo").innerHTML =
+        `部屋: <strong>${escapeHtml(room.roomName)}</strong> ／ あなた: <strong>${escapeHtml(session.playerName)}</strong>（${isHost ? "ホスト" : "メンバー"}）`;
+
+      const memberNames = players.map(p => `${p.name}${p.id === room.hostId ? "[ホスト]" : ""}`).join("、");
+      document.getElementById("memberList").textContent = `参加者（${players.length}人）: ${memberNames}`;
+      document.getElementById("themeDisplay").textContent = room.theme || "（ホストの開始待ち）";
+
+      const me = players.find(p => p.id === playerId);
+      const myCardArea = document.getElementById("myCardArea");
+      if (!room.started || !me || me.number === null || me.number === undefined) {
+        myCardArea.textContent = "ラウンド開始をお待ちください。";
+      } else {
+        const existingInput = document.getElementById("myAnswerInput");
+        const isTyping = existingInput && document.activeElement === existingInput;
+        if (!isTyping) {
+          myCardArea.innerHTML = `
+            <div>あなたの数字</div>
+            <div class="card-num">${me.number}</div>
+            <div>
+              <input id="myAnswerInput" type="text" placeholder="お題に沿った回答を入力"
+                value="${escapeHtml(me.answerText || "")}" ${room.revealed ? "disabled" : ""} style="width: 60%;" />
+              <button id="submitMyAnswerBtn" type="button" ${room.revealed ? "disabled" : ""}>
+                ${me.played ? "回答を再入力（更新）" : "場に出す"}
+              </button>
+            </div>
+          `;
+          document.getElementById("submitMyAnswerBtn").onclick = async () => {
+            const raw = document.getElementById("myAnswerInput").value;
+            const text = raw.trim() || "（回答なし）";
+            const roomRef = ref(db, `rooms/${session.roomKey}`);
+
+            await runTransaction(roomRef, (cur) => {
+              if (!cur || !cur.started || cur.revealed) return cur;
+              const pList = Array.isArray(cur.players) ? cur.players : [];
+              const target = pList.find(p => p.id === playerId);
+              if (!target) return cur;
+
+              let order = Array.isArray(cur.playedOrder) ? cur.playedOrder : [];
+              if (!target.played) {
+                target.played = true;
+                target.answerText = text;
+                order.push({
+                  playerId: target.id,
+                  playerName: target.name,
+                  number: target.number,
+                  answerText: text
+                });
+                appendLog(cur, `${target.name} がカードを出しました → 「${text}」`);
+              } else if (target.answerText !== text) {
+                const old = target.answerText;
+                target.answerText = text;
+                order = order.map(c => c.playerId === playerId ? { ...c, answerText: text } : c);
+                appendLog(cur, `${target.name} が回答を修正：「${old}」→「${text}」`);
+              }
+              cur.players = pList;
+              cur.playedOrder = order;
+              return cur;
+            });
+          };
+        }
+      }
+
+      const playedArea = document.getElementById("playedArea");
+      playedArea.innerHTML = "";
+      playedOrder.forEach((c, idx) => {
+        const div = document.createElement("div");
+        div.className = "played-card";
+        if (room.revealed) {
+          const prevOk = idx === 0 || playedOrder[idx - 1].number >= c.number;
+          div.classList.add(prevOk ? "ok" : "ng");
+        }
+        const numLabel = room.revealed ? `数字: ${c.number}` : "数字: ？";
+        div.innerHTML = `
+          <div>
+            <strong>${idx + 1}番目</strong> ｜ <strong>${escapeHtml(c.playerName)}</strong>：「${escapeHtml(c.answerText)}」（${numLabel}）
+          </div>
+          <div>
+            <button type="button" class="up-btn" ${room.revealed || idx === 0 ? "disabled" : ""}>↑ 上へ</button>
+            <button type="button" class="down-btn" ${room.revealed || idx === playedOrder.length - 1 ? "disabled" : ""}>↓ 下へ</button>
+          </div>
+        `;
+        div.querySelector(".up-btn").onclick = () => moveCard(idx, -1);
+        div.querySelector(".down-btn").onclick = () => moveCard(idx, 1);
+        playedArea.appendChild(div);
+      });
+
+      document.getElementById("logArea").innerHTML =
+        logs.map(line => `<div class="log-item">${escapeHtml(line)}</div>`).join("");
+    }
+
+    async function moveCard(index, direction) {
+      const roomRef = ref(db, `rooms/${session.roomKey}`);
+      await runTransaction(roomRef, (room) => {
+        if (!room || !room.started || room.revealed) return room;
+        const order = Array.isArray(room.playedOrder) ? room.playedOrder : [];
+        const targetIndex = index + direction;
+        if (index < 0 || index >= order.length || targetIndex < 0 || targetIndex >= order.length) return room;
+
+        const a = order[index];
+        const b = order[targetIndex];
+        order[index] = b;
+        order[targetIndex] = a;
+        room.playedOrder = order;
+        appendLog(room, `順番変更: ${a.playerName}（「${a.answerText}」）と ${b.playerName}（「${b.answerText}」）を入れ替え`);
+        return room;
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
