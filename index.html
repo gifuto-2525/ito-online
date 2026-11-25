@@ -3,106 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ito オンライン（GitHub Pages + Firebase）</title>
-  <style>
-    body { font-family: sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; background: #f8fafc; }
-    .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fff; }
-    .field { margin-bottom: 0.75rem; }
-    label.block { display: block; font-weight: bold; margin-bottom: 0.25rem; }
-    input[type="text"], input[type="password"] { padding: 0.45rem; border: 1px solid #94a3b8; border-radius: 4px; box-sizing: border-box; }
-    .full { width: 100%; }
-    button { padding: 0.45rem 0.9rem; margin-right: 0.4rem; margin-bottom: 0.3rem; cursor: pointer; border-radius: 4px; border: 1px solid #94a3b8; background: #f1f5f9; }
-    button:hover:not(:disabled) { background: #e2e8f0; }
-    button.primary { background: #1a56db; color: #fff; border-color: #1a56db; }
-    button.primary:hover:not(:disabled) { background: #1e40af; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .theme { font-size: 1.25rem; font-weight: bold; color: #1a56db; }
-    .card-num { font-size: 2rem; font-weight: bold; margin: 0.3rem 0; }
-    .played-card {
-      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-      border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.6rem 0.8rem; background: #f8fafc; margin-bottom: 0.4rem;
-    }
-    .played-card.ok { border-color: #16a34a; background: #f0fdf4; }
-    .played-card.ng { border-color: #dc2626; background: #fef2f2; }
-    .log-box {
-      max-height: 220px; overflow-y: auto; background: #0f172a; color: #f8fafc;
-      padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; font-family: monospace;
-    }
-    .log-item { border-bottom: 1px solid #1e293b; padding-bottom: 0.2rem; margin-bottom: 0.2rem; }
-  </style>
+  <title>ito ONLINE — Night Lounge Edition</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <h1>ito オンライン</h1>
+  <div class="container">
+    <header class="brand-header">
+      <h1 class="brand-title">ito ONLINE</h1>
+      <div class="brand-sub">Night Lounge Table</div>
+    </header>
 
-  <!-- ロビー画面 -->
-  <div id="lobbyScreen" class="box">
-    <h2>ロビー（入室設定）</h2>
-    <div class="field">
-      <label class="block" for="playerName">あなたの名前</label>
-      <input id="playerName" class="full" type="text" placeholder="例：タロウ" maxlength="20" />
-    </div>
-    <div class="field">
-      <label class="block">役割</label>
-      <label style="margin-right: 1rem;"><input type="radio" name="role" value="host" checked /> ホスト（部屋を作る）</label>
-      <label><input type="radio" name="role" value="member" /> メンバー（部屋に入る）</label>
-    </div>
-    <div class="field">
-      <label class="block" for="roomName">部屋名</label>
-      <input id="roomName" class="full" type="text" placeholder="例：ito部屋1" maxlength="30" />
-    </div>
-    <div class="field">
-      <label class="block" for="roomPassword">パスワード（合言葉）</label>
-      <input id="roomPassword" class="full" type="password" placeholder="合言葉を入力" maxlength="30" />
-    </div>
-    <button id="enterBtn" class="primary" type="button">入室する</button>
-    <div id="lobbyError" style="color: #dc2626; margin-top: 0.5rem;"></div>
-  </div>
-
-  <!-- ゲーム画面 -->
-  <div id="gameScreen" style="display: none;">
-    <div class="box">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <div id="headerInfo"></div>
-        <button id="leaveBtn" type="button">ロビーへ戻る</button>
+    <!-- ロビー画面 -->
+    <div id="lobbyScreen" class="panel">
+      <div class="panel-title">TABLE CHECK-IN（入室設定）</div>
+      <div class="field">
+        <label class="block" for="playerName">プレイヤー名</label>
+        <input id="playerName" type="text" placeholder="例：タロウ" maxlength="20" />
       </div>
-      <div id="memberList" style="margin-top: 0.4rem; font-size: 0.95rem; color: #475569;"></div>
-    </div>
-
-    <!-- ホスト専用コントロール -->
-    <div id="hostPanel" class="box" style="display: none;">
-      <strong>ホスト操作（ラウンド開始・お題設定）</strong>
-      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-        <input id="themeInput" type="text" placeholder="お題を入力（空欄ならランダム）" style="flex: 1; min-width: 220px;" />
-        <button id="fillRandomThemeBtn" type="button">ランダム候補を入れる</button>
-        <button id="startRoundBtn" class="primary" type="button">ラウンド開始</button>
+      <div class="field">
+        <label class="block">参加スタイル</label>
+        <div class="role-selector">
+          <label class="role-option"><input type="radio" name="role" value="host" checked /> ホスト（卓を作る）</label>
+          <label class="role-option"><input type="radio" name="role" value="member" /> メンバー（卓に入る）</label>
+        </div>
       </div>
-    </div>
-
-    <!-- お題 -->
-    <div class="box">
-      <div>今回のお題</div>
-      <div id="themeDisplay" class="theme">（ホストの開始待ち）</div>
-    </div>
-
-    <!-- 自分の手札・回答入力 -->
-    <div class="box">
-      <strong>あなたの手札・回答入力（公開前なら再入力可）</strong>
-      <div id="myCardArea" style="margin-top: 0.4rem;">ラウンド開始をお待ちください。</div>
-    </div>
-
-    <!-- 場のカード -->
-    <div class="box">
-      <strong>場のカード（大きい順に並び替え）</strong>
-      <div id="playedArea" style="margin-top: 0.5rem;"></div>
-      <div style="margin-top: 0.75rem;">
-        <button id="revealBtn" type="button">数字を一斉公開・判定（大きい順）</button>
+      <div class="field">
+        <label class="block" for="roomName">ルーム名</label>
+        <input id="roomName" type="text" placeholder="例：ラウンジ1号卓" maxlength="30" />
       </div>
+      <div class="field">
+        <label class="block" for="roomPassword">合言葉（パスワード）</label>
+        <input id="roomPassword" type="password" placeholder="合言葉を入力" maxlength="30" />
+      </div>
+      <button id="enterBtn" class="primary" type="button" style="width: 100%; padding: 0.75rem;">テーブルに着席する</button>
+      <div id="lobbyError" style="color: #fb7185; margin-top: 0.6rem; font-size: 0.9rem;"></div>
     </div>
 
-    <!-- ログ -->
-    <div class="box">
-      <strong>進行・回答ログ</strong>
-      <div id="logArea" class="log-box"></div>
+    <!-- ゲーム画面 -->
+    <div id="gameScreen" style="display: none;">
+      <div class="panel">
+        <div class="session-bar">
+          <div id="headerInfo"></div>
+          <button id="leaveBtn" type="button">退席する</button>
+        </div>
+        <div id="memberList" class="member-chips"></div>
+      </div>
+
+      <!-- ホスト専用コントロール -->
+      <div id="hostPanel" class="panel" style="display: none;">
+        <div class="panel-title">HOST CONTROL（お題・ゲーム進行）</div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input id="themeInput" type="text" placeholder="自由にお題を入力（空欄でランダム選出）" style="flex: 1; min-width: 220px;" />
+          <button id="fillRandomThemeBtn" type="button">お題を引く</button>
+          <button id="startRoundBtn" class="primary" type="button">カードを配る（開始）</button>
+        </div>
+      </div>
+
+      <!-- お題 -->
+      <div class="panel theme-stage">
+        <div class="theme-caption">CURRENT THEME</div>
+        <div id="themeDisplay" class="theme-text">ホストの開始をお待ちください</div>
+      </div>
+
+      <!-- 自分の手札・回答入力 -->
+      <div class="panel">
+        <div class="panel-title">YOUR HAND（あなたの手札・たとえ表現）</div>
+        <div id="myCardArea" style="color: var(--text-muted);">ラウンド開始をお待ちください。</div>
+      </div>
+
+      <!-- 場のカード -->
+      <div class="panel">
+        <div class="panel-title">TABLE CARDS（大きい順に並び替え）</div>
+        <div class="order-guide">
+          <span>▲ 上にあるほど「大きい（100に近い）」</span>
+          <span>▼ 下にあるほど「小さい（1に近い）」</span>
+        </div>
+        <div id="playedArea"></div>
+        <div style="margin-top: 0.9rem;">
+          <button id="revealBtn" class="reveal-btn" type="button">✦ カードを一斉オープン（結果判定）</button>
+        </div>
+      </div>
+
+      <!-- ログ -->
+      <div class="panel">
+        <div class="panel-title">TABLE LOG（進行履歴）</div>
+        <div id="logArea" class="log-box"></div>
+      </div>
     </div>
   </div>
 
@@ -129,61 +115,18 @@
     };
 
     const THEMES = [
-      // 大きさ・重さ・強さ系
-      "大きそうなもの",
-      "重そうなもの",
-      "強そうな武器・アイテム",
-      "硬そうなもの",
-      "速そうなもの・乗り物",
-      "長生きしそうな生き物",
-      "強いと思う動物",
-      "最強だと思うアニメ・ゲームキャラ",
-
-      // 人気・評価・価値系
-      "人気のアニメ・ゲームキャラ",
-      "高価そうなもの・高級品",
-      "人気のコンビニ商品",
-      "好きな給食・学食のメニュー",
-      "定番の旅行先",
-      "もらって嬉しいプレゼント",
-      "人気がありそうな職業",
-      "有名な歴史上の人物",
-
-      // 行動・シチュエーション系
-      "無人島に持っていきたいもの",
-      "言いづらい一言",
-      "休日にやりがちなこと",
-      "朝起きて最初にしたいこと",
-      "テンションが上がること",
-      "寝る前にやりがちなこと",
-      "夏にやりたくなること",
-      "冬にやりたくなること",
-      "学校や職場で怒られそうなこと",
-      "遅刻したときの言い訳",
-
-      // 感覚・感情・イメージ系
-      "怖いもの・ホラー要素",
-      "美味しそうな食べ物",
-      "酸っぱそうなもの",
-      "辛そうなもの",
-      "甘そうなもの",
-      "臭そうなもの",
-      "かっこいいセリフ・決め台詞",
-      "かわいいと思う生き物・キャラ",
-      "大人っぽいなと思う行動",
-      "子供っぽいなと思う行動",
-
-      // 日常・あるある系
-      "カバンに入っていると安心するもの",
-      "冷蔵庫に入っていそうなもの",
-      "100均で買える便利なもの",
-      "スマホに入れておきたいアプリ",
-      "カラオケで盛り上がる曲のジャンル・特徴",
-      "学生時代に流行ったもの",
-      "人生で一度はやってみたいこと",
-      "タイムマシンで行ってみたい時代・場所",
-      "超能力が1つ使えるなら欲しい能力",
-      "宝くじで1億円当たったらやりたいこと"
+      "大きそうなもの", "重そうなもの", "強そうな武器・アイテム", "硬そうなもの",
+      "速そうなもの・乗り物", "長生きしそうな生き物", "強いと思う動物", "最強だと思うアニメ・ゲームキャラ",
+      "人気のアニメ・ゲームキャラ", "高価そうなもの・高級品", "人気のコンビニ商品", "好きな給食・学食のメニュー",
+      "定番の旅行先", "もらって嬉しいプレゼント", "人気がありそうな職業", "有名な歴史上の人物",
+      "無人島に持っていきたいもの", "言いづらい一言", "休日にやりがちなこと", "朝起きて最初にしたいこと",
+      "テンションが上がること", "寝る前にやりがちなこと", "夏にやりたくなること", "冬にやりたくなること",
+      "学校や職場で怒られそうなこと", "遅刻したときの言い訳", "怖いもの・ホラー要素", "美味しそうな食べ物",
+      "酸っぱそうなもの", "辛そうなもの", "甘そうなもの", "臭そうなもの",
+      "かっこいいセリフ・決め台詞", "かわいいと思う生き物・キャラ", "大人っぽいなと思う行動", "子供っぽいなと思う行動",
+      "カバンに入っていると安心するもの", "冷蔵庫に入っていそうなもの", "100均で買える便利なもの", "スマホに入れておきたいアプリ",
+      "カラオケで盛り上がる曲のジャンル・特徴", "学生時代に流行ったもの", "人生で一度はやってみたいこと",
+      "タイムマシンで行ってみたい時代・場所", "超能力が1つ使えるなら欲しい能力", "宝くじで1億円当たったらやりたいこと"
     ];
 
     const app = initializeApp(FIREBASE_CONFIG);
@@ -203,6 +146,23 @@
       roomKey: "",
       unsubscribe: null
     };
+
+    // 1〜100の数値に応じたナイトラウンジ発光カラー
+    function getCardThemeStyle(num) {
+      if (typeof num !== "number") {
+        return `--card-accent: #94a3b8; --card-glow: rgba(148, 163, 184, 0.2);`;
+      }
+      if (num <= 25) {
+        return `--card-accent: #38bdf8; --card-glow: rgba(56, 189, 248, 0.35);`; // クールブルー
+      }
+      if (num <= 50) {
+        return `--card-accent: #34d399; --card-glow: rgba(52, 211, 153, 0.35);`; // エメラルド
+      }
+      if (num <= 75) {
+        return `--card-accent: #fbbf24; --card-glow: rgba(251, 191, 36, 0.4);`;  // アンバーゴールド
+      }
+      return `--card-accent: #fb7185; --card-glow: rgba(251, 113, 133, 0.45);`;   // ルビーレッド
+    }
 
     async function hashPassword(pw) {
       const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
@@ -232,7 +192,7 @@
       const errEl = document.getElementById("lobbyError");
 
       if (!name || !roomName || !password) {
-        errEl.textContent = "名前・部屋名・パスワードをすべて入力してください。";
+        errEl.textContent = "プレイヤー名・ルーム名・合言葉をすべて入力してください。";
         return;
       }
 
@@ -244,7 +204,7 @@
         if (role === "host") {
           const snap = await get(roomRef);
           if (snap.exists() && snap.val().passwordHash && snap.val().passwordHash !== pwHash) {
-            errEl.textContent = "同名の部屋が既に存在します（パスワード不一致）。";
+            errEl.textContent = "同名のルームが既に存在します（合言葉が一致しません）。";
             return;
           }
 
@@ -259,7 +219,7 @@
               { id: playerId, name, number: null, answerText: "", played: false }
             ],
             playedOrder: [],
-            logs: [`[${nowTime()}] 部屋「${roomName}」を作成しました（ホスト: ${name}）`]
+            logs: [`[${nowTime()}] ルーム「${roomName}」を開設しました（ホスト: ${name}）`]
           };
 
           await runTransaction(roomRef, (current) => {
@@ -271,12 +231,12 @@
         } else {
           const snap = await get(roomRef);
           if (!snap.exists()) {
-            errEl.textContent = "指定された部屋が見つかりません。";
+            errEl.textContent = "指定されたルームが見つかりません。";
             return;
           }
           const existing = snap.val();
           if (existing.passwordHash !== pwHash) {
-            errEl.textContent = "パスワードが違います。";
+            errEl.textContent = "合言葉が違います。";
             return;
           }
 
@@ -293,14 +253,14 @@
                 return current;
               }
               players.push({ id: playerId, name, number: null, answerText: "", played: false });
-              appendLog(current, `${name} が入室しました`);
+              appendLog(current, `${name} が着席しました`);
             }
             current.players = players;
             return current;
           });
 
           if (joinBlocked) {
-            errEl.textContent = "現在ラウンド進行中のため途中参加できません。";
+            errEl.textContent = "現在ゲーム進行中のため途中参加できません。";
             return;
           }
         }
@@ -384,9 +344,9 @@
             break;
           }
         }
-        const summary = order.map((c, i) => `${i + 1}番目:${c.playerName}[${c.number}](${c.answerText})`).join(" → ");
-        const label = isSuccess ? "成功！大きい順に並びました" : "失敗…小さい数字が先に来ています";
-        appendLog(room, `結果公開（大きい順）: ${label} / ${summary}`);
+        const summary = order.map((c, i) => `${i + 1}位:${c.playerName}[${c.number}](${c.answerText})`).join(" → ");
+        const label = isSuccess ? "成功！美しいグラデーション順に並びました" : "失敗…小さい数字が先に来ています";
+        appendLog(room, `オープン判定: ${label} / ${summary}`);
         return room;
       });
     });
@@ -399,12 +359,17 @@
 
       document.getElementById("hostPanel").style.display = isHost ? "block" : "none";
       document.getElementById("headerInfo").innerHTML =
-        `部屋: <strong>${escapeHtml(room.roomName)}</strong> ／ あなた: <strong>${escapeHtml(session.playerName)}</strong>（${isHost ? "ホスト" : "メンバー"}）`;
+        `ROOM: <strong style="color: var(--gold-light);">${escapeHtml(room.roomName)}</strong> ／ PLAYER: <strong>${escapeHtml(session.playerName)}</strong>`;
 
-      const memberNames = players.map(p => `${p.name}${p.id === room.hostId ? "[ホスト]" : ""}`).join("、");
-      document.getElementById("memberList").textContent = `参加者（${players.length}人）: ${memberNames}`;
-      document.getElementById("themeDisplay").textContent = room.theme || "（ホストの開始待ち）";
+      const memberList = document.getElementById("memberList");
+      memberList.innerHTML = players.map(p => {
+        const hostMark = p.id === room.hostId ? " ★HOST" : "";
+        return `<span class="member-chip ${p.id === room.hostId ? "host" : ""}">${escapeHtml(p.name)}${hostMark}</span>`;
+      }).join("");
 
+      document.getElementById("themeDisplay").textContent = room.theme || "ホストの開始をお待ちください";
+
+      // 自分の手札カード
       const me = players.find(p => p.id === playerId);
       const myCardArea = document.getElementById("myCardArea");
       if (!room.started || !me || me.number === null || me.number === undefined) {
@@ -413,20 +378,31 @@
         const existingInput = document.getElementById("myAnswerInput");
         const isTyping = existingInput && document.activeElement === existingInput;
         if (!isTyping) {
+          const cardStyle = getCardThemeStyle(me.number);
           myCardArea.innerHTML = `
-            <div>あなたの数字</div>
-            <div class="card-num">${me.number}</div>
-            <div>
-              <input id="myAnswerInput" type="text" placeholder="お題に沿った回答を入力"
-                value="${escapeHtml(me.answerText || "")}" ${room.revealed ? "disabled" : ""} style="width: 60%;" />
-              <button id="submitMyAnswerBtn" type="button" ${room.revealed ? "disabled" : ""}>
-                ${me.played ? "回答を再入力（更新）" : "場に出す"}
-              </button>
+            <div class="hand-layout">
+              <div class="playing-card" style="${cardStyle}">
+                <div class="corner-top">#${me.number}</div>
+                <div class="center-num">${me.number}</div>
+                <div class="corner-bottom">ito CARD</div>
+              </div>
+              <div class="hand-form">
+                <div style="font-size: 0.85rem; color: #cbd5e1;">
+                  数字は口に出さず、お題に沿った「たとえ」を入力してください（公開前なら修正可）。
+                </div>
+                <div class="hand-form-row">
+                  <input id="myAnswerInput" type="text" placeholder="例：東京タワー、コンビニのおにぎり..."
+                    value="${escapeHtml(me.answerText || "")}" ${room.revealed ? "disabled" : ""} />
+                  <button id="submitMyAnswerBtn" class="primary" type="button" ${room.revealed ? "disabled" : ""}>
+                    ${me.played ? "表現を更新する" : "テーブルに出す"}
+                  </button>
+                </div>
+              </div>
             </div>
           `;
           document.getElementById("submitMyAnswerBtn").onclick = async () => {
             const raw = document.getElementById("myAnswerInput").value;
-            const text = raw.trim() || "（回答なし）";
+            const text = raw.trim() || "（無言の表現）";
             const roomRef = ref(db, `rooms/${session.roomKey}`);
 
             await runTransaction(roomRef, (cur) => {
@@ -445,12 +421,12 @@
                   number: target.number,
                   answerText: text
                 });
-                appendLog(cur, `${target.name} がカードを出しました → 「${text}」`);
+                appendLog(cur, `${target.name} がテーブルにカードを出しました → 「${text}」`);
               } else if (target.answerText !== text) {
                 const old = target.answerText;
                 target.answerText = text;
                 order = order.map(c => c.playerId === playerId ? { ...c, answerText: text } : c);
-                appendLog(cur, `${target.name} が回答を修正：「${old}」→「${text}」`);
+                appendLog(cur, `${target.name} が表現を修正：「${old}」→「${text}」`);
               }
               cur.players = pList;
               cur.playedOrder = order;
@@ -460,23 +436,28 @@
         }
       }
 
+      // 場のカード
       const playedArea = document.getElementById("playedArea");
       playedArea.innerHTML = "";
       playedOrder.forEach((c, idx) => {
         const div = document.createElement("div");
-        div.className = "played-card";
+        div.className = "table-card";
         if (room.revealed) {
+          div.classList.add("revealed");
+          div.setAttribute("style", getCardThemeStyle(c.number));
           const prevOk = idx === 0 || playedOrder[idx - 1].number >= c.number;
           div.classList.add(prevOk ? "ok" : "ng");
         }
-        const numLabel = room.revealed ? `数字: ${c.number}` : "数字: ？";
+        const numLabel = room.revealed ? `#${c.number}` : "SECRET";
         div.innerHTML = `
           <div>
-            <strong>${idx + 1}番目</strong> ｜ <strong>${escapeHtml(c.playerName)}</strong>：「${escapeHtml(c.answerText)}」（${numLabel}）
+            <span class="rank-badge">${idx + 1}位</span>
+            <strong>${escapeHtml(c.playerName)}</strong>：「${escapeHtml(c.answerText)}」
+            <span class="num-pill">${numLabel}</span>
           </div>
           <div>
-            <button type="button" class="up-btn" ${room.revealed || idx === 0 ? "disabled" : ""}>↑ 上へ</button>
-            <button type="button" class="down-btn" ${room.revealed || idx === playedOrder.length - 1 ? "disabled" : ""}>↓ 下へ</button>
+            <button type="button" class="up-btn" ${room.revealed || idx === 0 ? "disabled" : ""}>▲ 上へ</button>
+            <button type="button" class="down-btn" ${room.revealed || idx === playedOrder.length - 1 ? "disabled" : ""}>▼ 下へ</button>
           </div>
         `;
         div.querySelector(".up-btn").onclick = () => moveCard(idx, -1);
@@ -501,7 +482,7 @@
         order[index] = b;
         order[targetIndex] = a;
         room.playedOrder = order;
-        appendLog(room, `順番変更: ${a.playerName}（「${a.answerText}」）と ${b.playerName}（「${b.answerText}」）を入れ替え`);
+        appendLog(room, `並び替え: ${a.playerName}（「${a.answerText}」）と ${b.playerName}（「${b.answerText}」）を入れ替え`);
         return room;
       });
     }
